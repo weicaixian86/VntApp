@@ -2,9 +2,13 @@ package com.rustvnt.vntapp;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.json.JSONObject;
 import org.junit.Test;
+
+import java.util.List;
 
 public class VntConfigStoreTest {
     @Test public void allowsOneServerWithoutExplicitIp() throws Exception {
@@ -77,6 +81,70 @@ public class VntConfigStoreTest {
     @Test public void acceptsCoreMtuRange() {
         VntConfigStore.Profile.validateMtu(1280);
         VntConfigStore.Profile.validateMtu(9000);
+    }
+
+    @Test public void acceptsValidIpv4() {
+        assertTrue(VntConfigStore.Profile.isValidIpv4("10.26.0.3"));
+        assertTrue(VntConfigStore.Profile.isValidIpv4("223.5.5.5"));
+        assertTrue(VntConfigStore.Profile.isValidIpv4("0.0.0.0"));
+        assertTrue(VntConfigStore.Profile.isValidIpv4("255.255.255.255"));
+    }
+
+    @Test public void rejectsInvalidIpv4() {
+        assertFalse(VntConfigStore.Profile.isValidIpv4("256.1.1.1"));
+        assertFalse(VntConfigStore.Profile.isValidIpv4("10.26.0"));
+        assertFalse(VntConfigStore.Profile.isValidIpv4("10.26.0.3.4"));
+        assertFalse(VntConfigStore.Profile.isValidIpv4("abc"));
+        assertFalse(VntConfigStore.Profile.isValidIpv4(""));
+        assertFalse(VntConfigStore.Profile.isValidIpv4("10.26..3"));
+        assertFalse(VntConfigStore.Profile.isValidIpv4(null));
+    }
+
+    @Test public void collectsValidDnsWhenTunnelEnabled() {
+        List<String> dns = VntConfigStore.Profile.validateDnsServers(true, "10.26.0.3\n223.5.5.5");
+        assertEquals(2, dns.size());
+        assertEquals("10.26.0.3", dns.get(0));
+        assertEquals("223.5.5.5", dns.get(1));
+    }
+
+    @Test public void ignoresDnsWhenTunnelDisabled() {
+        List<String> dns = VntConfigStore.Profile.validateDnsServers(false, "10.26.0.3\nbad-value");
+        assertTrue(dns.isEmpty());
+    }
+
+    @Test public void rejectsInvalidDnsWhenTunnelEnabled() {
+        try {
+            VntConfigStore.Profile.validateDnsServers(true, "10.26.0.3\nnot-an-ip");
+            fail("Expected DNS validation to fail");
+        } catch (IllegalArgumentException error) {
+            assertTrue(error.getMessage().contains("DNS 地址无效"));
+        }
+    }
+
+    @Test public void enabledDnsDefaultsOnCreate() throws Exception {
+        VntConfigStore.Profile profile = VntConfigStore.Profile.create(
+                "test", "quic://vpn.example.com:29872", "net", "", "device-id", "phone", "",
+                1380, false, false, false, false, false, false, false,
+                "", "", "", "", "", "", false,
+                "skip", "", "", false, "", "",
+                true, "10.26.0.3\n223.5.5.5", true);
+        JSONObject config = profile.config();
+        assertTrue(config.optBoolean("dns_tunnel", true));
+        assertEquals(2, config.getJSONArray("dns").length());
+        assertEquals("10.26.0.3", config.getJSONArray("dns").getString(0));
+    }
+
+    @Test public void omitsDnsFieldsWhenDisabled() throws Exception {
+        VntConfigStore.Profile profile = VntConfigStore.Profile.create(
+                "test", "quic://vpn.example.com:29872", "net", "", "device-id", "phone", "",
+                1380, false, false, false, false, false, false, false,
+                "", "", "", "", "", "", false,
+                "skip", "", "", false, "", "",
+                false, "", false);
+        JSONObject config = profile.config();
+        assertFalse(config.has("dns"));
+        assertEquals(false, config.optBoolean("dns_tunnel", true));
+        assertEquals(false, config.optBoolean("block_outside_dns", true));
     }
 
     private static void assertInvalidMtu(int mtu) {
