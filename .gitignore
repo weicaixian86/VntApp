@@ -16,3 +16,8 @@
 local.properties
 /scripts/build-rust-android.ps1
 /app/src/main/jniLibs/
+# 签名密钥库与导出文件（严禁提交）
+*.jks
+*.keystore
+*.p12
+*.p12.base64

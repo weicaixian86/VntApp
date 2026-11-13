@@ -183,7 +183,7 @@ jobs:
               exit 3
             }
           done
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.keystore
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.p12
           build_tools="$ANDROID_SDK_ROOT/build-tools/36.0.0"
           unsigned="app/build/outputs/apk/release/app-release-unsigned.apk"
           mkdir -p release-assets
@@ -191,13 +191,14 @@ jobs:
           output="release-assets/VNT-Android-${APP_TAG}-${VARIANT}.apk"
           "$build_tools/zipalign" -f -P 16 4 "$unsigned" "$aligned"
           "$build_tools/apksigner" sign \
-            --ks release.keystore \
+            --ks release.p12 \
+            --ks-type PKCS12 \
             --ks-key-alias "$ANDROID_KEY_ALIAS" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
             --key-pass env:ANDROID_KEY_PASSWORD \
             --out "$output" \
             "$aligned"
-          rm "$aligned" release.keystore
+          rm "$aligned" release.p12
           "$build_tools/zipalign" -c -P 16 4 "$output"
           "$build_tools/apksigner" verify --verbose --print-certs "$output"
           expected_libs="$(mktemp)"
