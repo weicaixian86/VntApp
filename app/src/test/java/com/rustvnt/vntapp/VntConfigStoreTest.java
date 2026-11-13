@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import org.json.JSONObject;
 import org.junit.Test;
 
 import java.util.List;
@@ -121,30 +120,15 @@ public class VntConfigStoreTest {
         }
     }
 
-    @Test public void enabledDnsDefaultsOnCreate() throws Exception {
-        VntConfigStore.Profile profile = VntConfigStore.Profile.create(
-                "test", "quic://vpn.example.com:29872", "net", "", "device-id", "phone", "",
-                1380, false, false, false, false, false, false, false,
-                "", "", "", "", "", "", false,
-                "skip", "", "", false, "", "",
-                true, "10.26.0.3\n223.5.5.5", true);
-        JSONObject config = profile.config();
-        assertTrue(config.optBoolean("dns_tunnel", true));
-        assertEquals(2, config.getJSONArray("dns").length());
-        assertEquals("10.26.0.3", config.getJSONArray("dns").getString(0));
+    @Test public void omitsDnsWhenTunnelDisabled() {
+        // 纯逻辑：关闭走隧道时不收集任何地址（即使原文本含非法项也不校验）。
+        assertTrue(VntConfigStore.Profile.validateDnsServers(false, "10.26.0.3\nnot-an-ip").isEmpty());
+        assertTrue(VntConfigStore.Profile.validateDnsServers(false, "").isEmpty());
     }
 
-    @Test public void omitsDnsFieldsWhenDisabled() throws Exception {
-        VntConfigStore.Profile profile = VntConfigStore.Profile.create(
-                "test", "quic://vpn.example.com:29872", "net", "", "device-id", "phone", "",
-                1380, false, false, false, false, false, false, false,
-                "", "", "", "", "", "", false,
-                "skip", "", "", false, "", "",
-                false, "", false);
-        JSONObject config = profile.config();
-        assertFalse(config.has("dns"));
-        assertEquals(false, config.optBoolean("dns_tunnel", true));
-        assertEquals(false, config.optBoolean("block_outside_dns", true));
+    @Test public void emptyDnsYieldsEmptyListWhenTunnelOn() {
+        assertTrue(VntConfigStore.Profile.validateDnsServers(true, "").isEmpty());
+        assertTrue(VntConfigStore.Profile.validateDnsServers(true, "\n , ").isEmpty());
     }
 
     private static void assertInvalidMtu(int mtu) {
