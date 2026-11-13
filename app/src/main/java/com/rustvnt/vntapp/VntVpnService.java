@@ -640,7 +640,7 @@ public final class VntVpnService extends VpnService {
      * 依次调用 addDnsServer()（第 1 条主用，其余备用）。非法地址跳过并记录日志。
      */
     private static void addTunnelDnsServers(Builder builder, JSONObject config) {
-        if (config == null || !config.optBoolean("dns_tunnel", true)) return;
+        if (config == null || !config.optBoolean("dns_tunnel", false)) return;
         JSONArray dns = config.optJSONArray("dns");
         if (dns == null || dns.length() == 0) return;
         for (int i = 0; i < dns.length(); i++) {

@@ -109,7 +109,7 @@ final class VntConfigStore {
                                boolean autoSyncSubnet, String certMode,
                                String tunnelPort, String portMapping, boolean allowMapping,
                                String udpStun, String tcpStun,
-                               boolean dnsTunnel, String dns, boolean blockOutsideDns) throws Exception {
+                               boolean dnsTunnel, String dns) throws Exception {
             validateBasicConfig(server, code, ip);
             validateMtu(mtu);
             List<String> dnsServers = validateDnsServers(dnsTunnel, dns);
@@ -167,9 +167,9 @@ final class VntConfigStore {
             JSONArray tcpStuns = new JSONArray();
             for (String value : tcpStun.split("[\\n,]")) if (!value.trim().isEmpty()) tcpStuns.put(value.trim());
             config.put("tcp_stun", tcpStuns);
-            // 隧道 DNS：仅在非默认时写入，保持旧配置结构兼容
-            if (!dnsTunnel) config.put("dns_tunnel", false);
-            if (!blockOutsideDns) config.put("block_outside_dns", false);
+            // 隧道 DNS：仅在非默认时写入，保持旧配置结构兼容。
+            // dns_tunnel 默认 false（不启用），故只在开启时写入 true。
+            if (dnsTunnel) config.put("dns_tunnel", true);
             if (!dnsServers.isEmpty()) {
                 JSONArray dnsArray = new JSONArray();
                 for (String value : dnsServers) dnsArray.put(value);
@@ -236,7 +236,7 @@ final class VntConfigStore {
                     "", mtu, false, false, false, false, false, allowIkev2, false,
                     "", "", "", "", "", "", false,
                     "skip", "", "", false, "", "",
-                    true, "", true);
+                    false, "");
         }
 
         Profile withId(String existingId) { return new Profile(existingId, name, json, mode, subscription); }

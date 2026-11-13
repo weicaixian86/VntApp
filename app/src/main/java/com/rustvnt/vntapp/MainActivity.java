@@ -473,7 +473,7 @@ public final class MainActivity extends AppCompatActivity {
     }
 
     private static String dnsSummary(JSONObject config) {
-        boolean tunnel = config.optBoolean("dns_tunnel", true);
+        boolean tunnel = config.optBoolean("dns_tunnel", false);
         if (!tunnel) return "系统 DNS（未走隧道）";
         JSONArray dns = config.optJSONArray("dns");
         List<String> values = new ArrayList<>();
@@ -929,16 +929,12 @@ public final class MainActivity extends AppCompatActivity {
                 "no".equalsIgnoreCase(config.optString("device_mode", "tun").trim()));
 
         LinearLayout dnsSection = section(form, "隧道 DNS", false);
-        CheckBox dnsTunnel = toggle(dnsSection, "DNS 走隧道（推荐）", "关闭后 DNS 由系统/运营商解析，可能被污染",
-                "开启时把下方 DNS 服务器注入 VPN 隧道，隧道内应用统一走这些 DNS；关闭则回退系统 DNS。",
-                config.optBoolean("dns_tunnel", true));
+        CheckBox dnsTunnel = toggle(dnsSection, "DNS 走隧道", "关闭后 DNS 由系统/运营商解析，可能被污染",
+                "开启时把下方 DNS 服务器注入 VPN 隧道，隧道内应用统一走这些 DNS；关闭则回退系统 DNS（默认关闭）。",
+                config.optBoolean("dns_tunnel", false));
         ListInput dnsServers = new ListInput(dnsSection, "DNS 服务器", "例如：10.26.0.3",
                 "＋ 添加 DNS 服务器", toList(config.optJSONArray("dns")),
                 "第一行为主用 DNS，其余按顺序作为备用。建议填 VNT 对端（路由器）的隧道 IP，例如 10.26.0.3；多条实现主备切换。需为合法 IPv4 地址。");
-        CheckBox blockOutsideDns = toggle(dnsSection, "阻止隧道外 DNS（DoT/DoH 回落）",
-                "让使用内置加密 DNS 的 App 回落到隧道 DNS（需内核/防火墙配合）",
-                "记录该意图。纯 App 侧无法 100% 拦截其他进程的 DoH/DoT，真正兜底需在路由器侧（iptables/nft 阻断 853 端口与已知 DoH）配合。",
-                config.optBoolean("block_outside_dns", true));
         dnsServers.enabledBy(dnsTunnel);
 
         LinearLayout transport = section(form, "传输优化", false);
@@ -1134,7 +1130,7 @@ public final class MainActivity extends AppCompatActivity {
                         peerAddresses.joined(), turns.joined(), punchModels.joined(), outputRoutes.joined(), inputRoutes.joined(),
                         subnetMappings.joined(), autoSyncSubnet.isChecked(), certValue,
                         tunnelPort.getText().toString(), portMappings.joined(), allowMapping.isChecked(), udpStuns.joined(), tcpStuns.joined(),
-                        dnsTunnel.isChecked(), dnsServers.joined(), blockOutsideDns.isChecked());
+                        dnsTunnel.isChecked(), dnsServers.joined());
                 if (existing != null) profile = profile.withId(existing.id);
                 store.save(profile);
                 dialog.dismiss();
